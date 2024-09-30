@@ -5,11 +5,8 @@ const app = express();
 // Middleware to parse JSON request body
 app.use(express.json());
 
-// Utility function to add a delay (sleep)
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-// Route to get the download link via Streamtape APIs
-app.get('/get-download-link', async (req, res) => {
+// Route to get and serve the video
+app.get('/stream-video', async (req, res) => {
     try {
         const fileId = req.query.fileId; // Get the file ID from the query params
         const login = '0287aca2ef38b0d9a210'; // Your Streamtape login
@@ -20,18 +17,24 @@ app.get('/get-download-link', async (req, res) => {
 
         if (ticketResponse.data.status === 200) {
             const ticket = ticketResponse.data.result.ticket;
-            console.log('Download Ticket:', ticket);
 
-            // Wait for 2 seconds (or more, based on the API response)
-            await delay(4000);
+            // Wait 2 seconds as required by Streamtape
+            await new Promise(resolve => setTimeout(resolve, 4000));
 
-            // Second API: Use the ticket to get the download link
-            const linkResponse = await axios.get(`https://api.streamtape.com/file/dl?file=${fileId}&ticket=${ticket}`);
+            // Second API: Get the download link
+            const linkResponse = await axios({
+                method: 'GET',
+                url: `https://api.streamtape.com/file/dl?file=${fileId}&ticket=${ticket}`,
+                responseType: 'stream'  // Important! We need to stream the video
+            });
 
-            if (linkResponse.data.status === 200) {
-                const downloadLink = linkResponse.data.result.url;
-                console.log('Download Link:', downloadLink);
-                res.json({ downloadLink });
+            if (linkResponse.status === 200) {
+                // Set headers for streaming the video
+                res.setHeader('Content-Type', 'video/mp4');
+                res.setHeader('Content-Disposition', 'inline');
+
+                // Pipe the video stream from Streamtape to the client
+                linkResponse.data.pipe(res);
             } else {
                 res.status(500).json({ error: 'Failed to get download link', message: linkResponse.data.msg });
             }
