@@ -5,8 +5,11 @@ const app = express();
 // Middleware to parse JSON request body
 app.use(express.json());
 
-// Route to get and serve the video
-app.get('/stream-video', async (req, res) => {
+// Utility function to add a delay (sleep)
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Route to get the download link via Streamtape APIs
+app.get('/get-download-link', async (req, res) => {
     try {
         const fileId = req.query.fileId; // Get the file ID from the query params
         const login = '0287aca2ef38b0d9a210'; // Your Streamtape login
@@ -17,24 +20,29 @@ app.get('/stream-video', async (req, res) => {
 
         if (ticketResponse.data.status === 200) {
             const ticket = ticketResponse.data.result.ticket;
+            console.log('Download Ticket:', ticket);
 
-            // Wait 2 seconds as required by Streamtape
-            await new Promise(resolve => setTimeout(resolve, 4000));
+            // Wait for 2 seconds (or more, based on the API response)
+            await delay(4000);
 
-            // Second API: Get the download link
-            const linkResponse = await axios({
-                method: 'GET',
-                url: `https://api.streamtape.com/file/dl?file=${fileId}&ticket=${ticket}`,
-                responseType: 'stream'  // Important! We need to stream the video
-            });
+            // Second API: Use the ticket to get the download link
+            const linkResponse = await axios.get(`https://api.streamtape.com/file/dl?file=${fileId}&ticket=${ticket}`);
 
-            if (linkResponse.status === 200) {
-                // Set headers for streaming the video
-                res.setHeader('Content-Type', 'video/mp4');
-                res.setHeader('Content-Disposition', 'inline');
+            if (linkResponse.data.status === 200) {
+                const downloadLink = linkResponse.data.result.url;
+                console.log('Download Link:', downloadLink);
 
-                // Pipe the video stream from Streamtape to the client
-                linkResponse.data.pipe(res);
+                // Now, fetch the video content through your server and serve it
+                const videoResponse = await axios.get(downloadLink, {
+                    responseType: 'stream' // To stream the video content
+                });
+
+                // Set appropriate headers and pipe the video content to the client
+                res.setHeader('Content-Type', videoResponse.headers['content-type']);
+                res.setHeader('Content-Length', videoResponse.headers['content-length']);
+
+                // Pipe the video content directly to the client
+                videoResponse.data.pipe(res);
             } else {
                 res.status(500).json({ error: 'Failed to get download link', message: linkResponse.data.msg });
             }
