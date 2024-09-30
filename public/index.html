@@ -40,7 +40,7 @@
                     const videoContainer = document.getElementById('video-container');
                     videoContainer.innerHTML = `
                         <video controls>
-                            <source src="${data.downloadLink}" type="video/mp4">
+                            <source src="https://cors-proxy-server-f3n5.onrender.com/proxy-download?url=${data.downloadLink}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
                     `;
