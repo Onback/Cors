@@ -9,8 +9,8 @@ app.use(express.json());
 app.get('/get-download-link', async (req, res) => {
     try {
         const fileId = req.query.fileId; // Get the file ID from the query params
-        const login = 'YOUR_LOGIN'; // Your Streamtape login
-        const key = 'YOUR_KEY';     // Your Streamtape API key
+        const login = '0287aca2ef38b0d9a210'; // Your Streamtape login
+        const key = 'k2ljGZWXMKirrK';     // Your Streamtape API key
 
         // First API: Get the download ticket
         const ticketResponse = await axios.get(`https://api.streamtape.com/file/dlticket?file=${fileId}&login=${login}&key=${key}`);
