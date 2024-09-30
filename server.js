@@ -5,6 +5,9 @@ const app = express();
 // Middleware to parse JSON request body
 app.use(express.json());
 
+// Utility function to add a delay (sleep)
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 // Route to get the download link via Streamtape APIs
 app.get('/get-download-link', async (req, res) => {
     try {
@@ -19,8 +22,8 @@ app.get('/get-download-link', async (req, res) => {
             const ticket = ticketResponse.data.result.ticket;
             console.log('Download Ticket:', ticket);
 
-            // Delay to avoid rate-limiting issues
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 seconds delay
+            // Wait for 2 seconds (or more, based on the API response)
+            await delay(2000);
 
             // Second API: Use the ticket to get the download link
             const linkResponse = await axios.get(`https://api.streamtape.com/file/dl?file=${fileId}&ticket=${ticket}`);
@@ -46,4 +49,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-  
