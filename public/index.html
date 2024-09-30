@@ -1,1 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        video {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            margin: 20px 0;
+        }
+
+        .message {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Streamtape Video Player</h1>
+    <div id="video-container">
+        <p>Fetching download link...</p>
+    </div>
+    <p class="message" id="message"></p>
+
+    <script>
+        // Fetch the download link from your backend
+        fetch('https://your-backend-url.com/get-download-link?fileId=YOUR_FILE_ID')
+            .then(response => response.json())
+            .then(data => {
+                if (data.downloadLink) {
+                    // Create a video element
+                    const videoContainer = document.getElementById('video-container');
+                    videoContainer.innerHTML = `
+                        <video controls>
+                            <source src="${data.downloadLink}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    `;
+                } else {
+                    // Show error message if something went wrong
+                    document.getElementById('message').textContent = 'Error fetching video link.';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('message').textContent = 'An error occurred while fetching the video link.';
+            });
+    </script>
+
+</body>
+</html>
 
