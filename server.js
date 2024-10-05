@@ -37,7 +37,7 @@ app.get('/get-all-download-links', async (req, res) => {
                         console.log(`Download Ticket for ${fileName}:`, ticket);
 
                         // Wait for 4 seconds to avoid rate-limiting issues
-                        await delay(4000);
+                        await delay(3000);
 
                         // Use the download ticket to get the download link
                         const linkResponse = await axios.get(`https://api.streamtape.com/file/dl?file=${fileId}&ticket=${ticket}`);
