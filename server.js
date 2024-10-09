@@ -2,50 +2,85 @@ const express = require('express');
 const axios = require('axios');
 const app = express();
 
-app.use(express.json());  // Middleware to parse JSON request body
+// Middleware to parse JSON request body
+app.use(express.json());
 
-// Utility function to add delay (if needed)
+// Utility function to add a delay (sleep)
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Function to fetch download link for a single file
-async function fetchDownloadLink(fileId, login, key) {
+// Function to process a single video (fetch ticket, download link, and thumbnail)
+const processVideo = async (file, login, key) => {
+    const fileId = file.linkid;
+    const fileName = file.name;
+
     try {
-        // Second API call: Get the download ticket
+        // Get download ticket
         const ticketResponse = await axios.get(`https://api.streamtape.com/file/dlticket?file=${fileId}&login=${login}&key=${key}`);
-        const downloadTicket = ticketResponse.data.result.ticket;
+        if (ticketResponse.data.status === 200) {
+            const ticket = ticketResponse.data.result.ticket;
 
-        // Wait for a small delay if the API imposes it (optional)
-        await delay(2000);  // Adjust the delay if necessary
+            // Wait 2 seconds to avoid rate-limiting
+            await delay(2000);
 
-        // Third API call: Get the download link using the ticket
-        const downloadResponse = await axios.get(`https://api.streamtape.com/file/dl?file=${fileId}&ticket=${downloadTicket}`);
-        
-        if (downloadResponse.data.status === 200) {
-            const downloadUrl = downloadResponse.data.result.url;
-            return { fileId, downloadUrl };  // Return download URL for each file
+            // Get download link using the ticket
+            const linkResponse = await axios.get(`https://api.streamtape.com/file/dl?file=${fileId}&ticket=${ticket}`);
+            if (linkResponse.data.status === 200) {
+                const downloadLink = linkResponse.data.result.url;
+
+                // Get video thumbnail (thumbs)
+                const thumbResponse = await axios.get(`https://api.streamtape.com/file/getsplash?login=${login}&key=${key}&file=${fileId}`);
+                const videoThumb = thumbResponse.data.result;
+
+                // Return the video information
+                return {
+                    fileName: fileName,
+                    downloadLink: downloadLink,
+                    videoThumb: videoThumb
+                };
+            } else {
+                return { fileName, downloadLink: 'Error: Could not get download link', videoThumb: 'Error: No thumbnail available' };
+            }
         } else {
-            return { fileId, error: 'Failed to get download link' };
+            return { fileName, downloadLink: 'Error: Could not get download ticket', videoThumb: 'Error: No thumbnail available' };
         }
     } catch (error) {
-        return { fileId, error: error.message };
+        return { fileName, downloadLink: 'Error: Internal error', videoThumb: 'Error: No thumbnail available' };
     }
-}
+};
 
-// Route to handle batch processing of multiple file IDs
-app.post('/get-batch-download-links', async (req, res) => {
-    const { fileIds } = req.body;  // Expecting an array of file IDs in the request body
-    const login = '0287aca2ef38b0d9a210';  // Your Streamtape login
-    const key = 'k2ljGZWXMKirrK';          // Your Streamtape API key
-
-    if (!Array.isArray(fileIds) || fileIds.length === 0) {
-        return res.status(400).json({ error: 'No file IDs provided' });
-    }
-
+// Route to get the download links and thumbnails via Streamtape APIs for all videos
+app.get('/get-all-download-links', async (req, res) => {
     try {
-        const results = await Promise.all(fileIds.map(fileId => fetchDownloadLink(fileId, login, key)));
-        res.json({ files: results });  // Send all download links in a single response
+        const login = '0287aca2ef38b0d9a210'; // Your Streamtape login
+        const key = 'k2ljGZWXMKirrK';         // Your Streamtape API key
+
+        // First API: Get the list of all video IDs and names
+        const videoListResponse = await axios.get(`https://api.streamtape.com/file/listfolder?login=${login}&key=${key}`);
+
+        if (videoListResponse.data.status === 200) {
+            const files = videoListResponse.data.result.files;  // Get all files (video IDs and names)
+            console.log("Files found:", files);
+
+            const BATCH_SIZE = 5;  // Number of videos to process in parallel (tune this based on rate limits)
+            const videoLinks = [];
+
+            for (let i = 0; i < files.length; i += BATCH_SIZE) {
+                // Process videos in batches
+                const batch = files.slice(i, i + BATCH_SIZE).map(file => processVideo(file, login, key));
+
+                // Wait for the batch to complete
+                const results = await Promise.all(batch);
+                videoLinks.push(...results);
+            }
+
+            // Return the result as JSON
+            res.json({ videos: videoLinks });
+        } else {
+            res.status(500).json({ error: 'Failed to get video list', message: videoListResponse.data.msg });
+        }
     } catch (error) {
-        res.status(500).json({ error: 'Failed to process batch request', details: error.message });
+        console.error('Error:', error.message);
+        res.status(500).json({ error: 'Internal Server Error', message: error.message });
     }
 });
 
