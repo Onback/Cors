@@ -1,15 +1,16 @@
 {
-  "name": "streamtape-proxy",
+  "name": "streamtape-video-fetcher",
   "version": "1.0.0",
-  "description": "A simple Node.js server to bypass CORS and fetch Streamtape download links.",
+  "description": "A Node.js server that fetches and stores Streamtape video data (name, download link, thumbnail) every 2 hours and serves it to the frontend.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.17.1",
-    "axios": "^0.21.1"
+    "axios": "^0.21.1",
+    "node-cron": "^2.0.3"
   },
-  "author": "suraj",
+  "author": "Your Name",
   "license": "ISC"
 }
