@@ -1,7 +1,11 @@
 const express = require('express');
 const axios = require('axios');
-const cron = require('node-cron'); // Import node-cron for scheduling tasks
+const cron = require('node-cron');
+const cors = require('cors');  // Import CORS
 const app = express();
+
+// Enable CORS for all requests
+app.use(cors());  // This will allow access from anywhere
 
 // Middleware to parse JSON request body
 app.use(express.json());
